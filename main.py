@@ -1,5 +1,5 @@
 import streamlit as st
-from st_chat_message import message
+from streamlit_chat import message  # ✅ Fix: replaced st_chat_message
 import pandas as pd
 from datetime import datetime
 from summarizer import summary_agent
@@ -12,7 +12,6 @@ if "llm_chain" not in st.session_state:
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
 
 def append_state_messages(user_message, bot_message):
     st.session_state.messages.append({"user_message": user_message, "bot_message": bot_message})
@@ -34,13 +33,6 @@ with tab1:
         message(output, is_user=False, key="bot_message")
         append_state_messages(user_message, output)
 
-
-
 with tab2:
     st.header("Details")
     st.info("Created by: Sambhab Ranjan Mahana \n\n This is an AI Lecture Summarizer that uses Huggingface AI model to summarize YouTube videos and articles.")
-
-
-
-
-
