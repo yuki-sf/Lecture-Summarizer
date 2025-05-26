@@ -60,6 +60,16 @@ Open `http://localhost:8501` in your browser and start summarizing!
 
 ---
 
+## 🌐 Use It Online — No Setup Needed!
+
+Not ready to run locally? No problem! You can try the **AI Lecture Summarizer** instantly on Streamlit’s hosted app:
+
+[https://lecture-summarizer.streamlit.app](https://lecture-summarizer.streamlit.app)
+
+Just drop your YouTube or article link in the chat box and watch the AI work its magic — zero installation, zero hassle!
+
+---
+
 
 ## ⚠️ Heads up about YouTube transcripts
 YouTube sometimes blocks transcript requests — especially from cloud servers like AWS or GCP — resulting in errors like:
