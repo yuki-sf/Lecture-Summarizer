@@ -2,25 +2,56 @@ import os
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from langchain.document_loaders import YoutubeLoader
+from langchain_community.document_loaders import YoutubeLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+
 
 load_dotenv()
 
 HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
-API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
+API_URL = "https://api-inference.huggingface.co/models/sshleifer/distilbart-cnn-12-6"
 HEADERS = {"Authorization": f"Bearer {HUGGINGFACE_API_KEY}"}
 
 text_splitter = RecursiveCharacterTextSplitter(
-    separators=["\n\n", "\n", " "], chunk_size=1000, chunk_overlap=100
+    separators=["\n\n", "\n", " "], chunk_size=2000, chunk_overlap=100 #Adjust chunk size for better summarization
 )
+
+video_splitter = RecursiveCharacterTextSplitter(
+    separators=["\n\n", "\n", " "], chunk_size=1000, chunk_overlap=50 # Larger chunks for video transcripts
+)
+
 
 def huggingface_summarize(text: str) -> str:
     print("[HF] Summarizing chunk of text...")
-    payload = {"inputs": text}
+    payload = {"inputs": text,
+               "parameters": {
+                    "min_length": 100,   # Adjust for ~200 word summaries
+                    "max_length": 300,
+                    "do_sample": False
+                }
+    }
     response = requests.post(API_URL, headers=HEADERS, json=payload)
     if response.status_code != 200:
         print(f"[HF] Error {response.status_code}: {response.text}")
+        return f"Error: Hugging Face API failed with status code {response.status_code}"
+    
+    summary = response.json()
+    if isinstance(summary, list) and "summary_text" in summary[0]:
+        return summary[0]["summary_text"]
+    return "Error: Unexpected API response format."
+
+def huggingface_video_summarize(text: str) -> str:
+    print("[HF Video] Summarizing video chunk...")
+    payload = {"inputs": text,
+               "parameters": {
+                    "min_length": 20,   # Adjust for ~100 word summaries
+                    "max_length": 50,
+                    "do_sample": False
+                }
+    }
+    response = requests.post(API_URL, headers=HEADERS, json=payload)
+    if response.status_code != 200:
+        print(f"[HF Video] Error {response.status_code}: {response.text}")
         return f"Error: Hugging Face API failed with status code {response.status_code}"
     
     summary = response.json()
@@ -33,6 +64,14 @@ def summarize_text_chunks(chunks):
     for i, chunk in enumerate(chunks):
         print(f"[Summarizer] Summarizing chunk {i + 1} of {len(chunks)}...")
         summary = huggingface_summarize(chunk.page_content)
+        summaries.append(summary)
+    return "\n\n".join(summaries)
+
+def summarize_video_chunks(chunks):
+    summaries = []
+    for i, chunk in enumerate(chunks):
+        print(f"[Video Summarizer] Summarizing video chunk {i + 1} of {len(chunks)}...")
+        summary = huggingface_video_summarize(chunk.page_content)
         summaries.append(summary)
     return "\n\n".join(summaries)
 
@@ -68,12 +107,12 @@ def summarize_youtube_video(url: str) -> str:
             return "Failed to extract transcript for summarization."
         
         print("[YouTube] Splitting transcript into chunks...")
-        docs = text_splitter.create_documents([doc.page_content for doc in documents])
+        docs = video_splitter.create_documents([doc.page_content for doc in documents])
     except Exception as e:
         return f"Error loading YouTube video: {str(e)}"
     
     print(f"[YouTube] Loaded and split into {len(docs)} chunk(s).")
-    return summarize_text_chunks(docs)
+    return summarize_video_chunks(docs)
 
 class summary_agent():
     def summarize(self, input_text: str) -> str:
@@ -93,4 +132,3 @@ if __name__ == "__main__":
     agent = summary_agent()
     print("\n[Summary Output]\n")
     print(agent.summarize(query))
-
